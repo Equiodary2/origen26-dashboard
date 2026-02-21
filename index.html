@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Origen26 · Dashboard en Vivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --black: #0A0A08; --ink: #1A1A18; --white: #FAFAF8;
+    --gray-50: #FCFCFB; --gray-100: #F2F2EF; --gray-200: #E6E6E2;
+    --gray-300: #CFCFC8; --gray-400: #A3A39C; --gray-600: #636358;
+    --gold: #C8A84B; --gold-light: #F0E4BC; --gold-dark: #8A6D29;
+    --green: #2A9A6A; --green-bg: #EDFAF4;
+    --red: #DC4F40; --red-bg: #FDF0EE;
+    --blue: #4872E8; --blue-bg: #EDF2FD;
+    --amber: #E88C35; --amber-bg: #FEF4EC;
+    --purple: #7C5CBF; --purple-bg: #F4F0FD;
+  }
+  body { background: var(--gray-100); font-family: 'DM Sans', sans-serif; color: var(--ink); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+  /* TOP BAR */
+  .top-bar { background: var(--black); padding: 18px 40px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 32px rgba(0,0,0,0.15); }
+  .logo-area { display: flex; align-items: center; gap: 20px; }
+  .logo-text { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--white); letter-spacing: -0.5px; }
+  .logo-text span { color: var(--gold); }
+  .hotel-label { padding: 4px 12px; border: 1px solid rgba(200,168,75,0.35); border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold); }
+  .top-right { display: flex; align-items: center; gap: 12px; }
+  .live-badge { display: flex; align-items: center; gap: 8px; padding: 7px 16px; background: rgba(255,255,255,0.06); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); font-size: 12px; color: rgba(255,255,255,0.75); font-weight: 500; }
+  .pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s ease-in-out infinite; }
+  .sync-btn { display: flex; align-items: center; gap: 6px; padding: 7px 16px; background: rgba(200,168,75,0.15); border-radius: 20px; border: 1px solid rgba(200,168,75,0.3); font-size: 11px; color: var(--gold); font-weight: 600; cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px; }
+  .sync-btn:hover { background: rgba(200,168,75,0.25); }
+  .sync-btn.spinning .sync-icon { display: inline-block; animation: spin 1s linear infinite; }
+  .print-btn { display: flex; align-items: center; gap: 6px; padding: 7px 16px; background: rgba(255,255,255,0.06); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); font-size: 11px; color: rgba(255,255,255,0.6); font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .print-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+  .last-sync { font-size: 10px; color: var(--gray-400); font-weight: 500; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+  /* LOADING */
+  .loading-screen { position: fixed; inset: 0; background: var(--black); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; transition: opacity 0.5s; }
+  .loading-screen.hidden { opacity: 0; pointer-events: none; }
+  .loading-logo { font-family: 'DM Serif Display', serif; font-size: 42px; color: var(--white); margin-bottom: 8px; }
+  .loading-logo span { color: var(--gold); }
+  .loading-sub { font-size: 13px; color: var(--gray-400); margin-bottom: 40px; letter-spacing: 1px; }
+  .loading-bar-track { width: 200px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+  .loading-bar-fill { height: 100%; background: var(--gold); border-radius: 2px; width: 0; transition: width 0.8s ease; }
+  .loading-status { font-size: 11px; color: var(--gray-600); margin-top: 12px; }
+
+  /* ERROR / INFO BANNERS */
+  .error-banner { background: var(--red-bg); border: 1px solid rgba(220,79,64,0.2); border-radius: 12px; padding: 16px 20px; margin: 20px 40px; display: none; align-items: center; gap: 12px; font-size: 13px; color: var(--red); }
+  .error-banner.visible { display: flex; }
+  .info-banner { background: var(--blue-bg); border: 1px solid rgba(72,114,232,0.2); border-radius: 12px; padding: 16px 20px; margin: 20px 40px 0; font-size: 13px; color: var(--blue); }
+  .info-banner strong { display: block; font-size: 14px; margin-bottom: 6px; }
+  .info-banner ol { margin-left: 18px; margin-top: 8px; line-height: 2; }
+  .info-banner code { background: rgba(72,114,232,0.1); padding: 2px 6px; border-radius: 4px; font-size: 12px; font-family: monospace; }
+
+  /* CONTAINER */
+  .container { max-width: 1500px; margin: 0 auto; padding: 36px 40px; }
+  .section-block { margin-bottom: 48px; animation: fadeUp 0.5s ease forwards; }
+  .section-header { margin-bottom: 18px; }
+  .section-label { font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin-bottom: 5px; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--ink); letter-spacing: -0.3px; }
+
+  /* KPI GRID */
+  .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+  .kpi-card { background: white; border-radius: 18px; padding: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 6px 24px rgba(0,0,0,0.04); transition: all 0.3s cubic-bezier(0.4,0,0.2,1); position: relative; overflow: hidden; }
+  .kpi-card::after { content:''; position:absolute; top:0;left:0;right:0; height:3px; background:var(--gold); opacity:0; transition:opacity 0.3s; }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.07), 0 20px 48px rgba(0,0,0,0.06); }
+  .kpi-card:hover::after { opacity: 1; }
+  .kpi-card.gold-accent .kpi-value { color: var(--gold); }
+  .kpi-card.red-accent { background: linear-gradient(135deg, var(--red-bg) 0%, white 60%); border: 1px solid rgba(220,79,64,0.12); }
+  .kpi-card.red-accent .kpi-value { color: var(--red); }
+  .kpi-card.amber-accent { background: linear-gradient(135deg, var(--amber-bg) 0%, white 60%); border: 1px solid rgba(232,140,53,0.12); }
+  .kpi-card.amber-accent .kpi-value { color: var(--amber); }
+  .kpi-card.green-accent { background: linear-gradient(135deg, var(--green-bg) 0%, white 60%); border: 1px solid rgba(42,154,106,0.12); }
+  .kpi-card.green-accent .kpi-value { color: var(--green); }
+  .kpi-card.blue-accent { background: linear-gradient(135deg, var(--blue-bg) 0%, white 60%); border: 1px solid rgba(72,114,232,0.12); }
+  .kpi-card.blue-accent .kpi-value { color: var(--blue); }
+  .kpi-icon { font-size: 18px; margin-bottom: 12px; display: block; }
+  .kpi-label { font-size: 10px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; color: var(--gray-400); margin-bottom: 10px; }
+  .kpi-value { font-family: 'DM Serif Display', serif; font-size: 44px; line-height: 1; color: var(--ink); margin-bottom: 12px; letter-spacing: -1px; transition: all 0.3s; }
+  .kpi-meta { font-size: 11px; color: var(--gray-600); margin-top: 5px; }
+
+  /* MINI GRID */
+  .mini-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .mini-card { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: transform 0.2s; }
+  .mini-card:hover { transform: translateY(-1px); }
+  .mini-label { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gray-400); margin-bottom: 8px; }
+  .mini-value { font-family: 'DM Serif Display', serif; font-size: 30px; color: var(--ink); line-height: 1; }
+  .mini-desc { font-size: 11px; color: var(--gray-600); margin-top: 4px; }
+
+  /* PIPELINE CARD */
+  .pipeline-card { background: var(--black); border-radius: 18px; padding: 32px; margin-bottom: 28px; position: relative; overflow: hidden; }
+  .pipeline-card::before { content:''; position:absolute; top:-60px;right:-60px; width:200px;height:200px; background:radial-gradient(circle, rgba(200,168,75,0.15) 0%, transparent 70%); pointer-events:none; }
+  .pipeline-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--white); margin-bottom: 4px; }
+  .pipeline-period { font-size: 11px; color: var(--gray-400); }
+  .pipeline-value { font-family: 'DM Serif Display', serif; font-size: 52px; color: var(--gold); line-height: 1; letter-spacing: -2px; margin-top: 20px; }
+  .pipeline-desc { font-size: 12px; color: var(--gray-400); margin-top: 8px; }
+  .pipeline-stages { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 28px; padding-top: 28px; border-top: 1px solid rgba(255,255,255,0.07); }
+  .stage { text-align: center; }
+  .stage-count { font-family: 'DM Serif Display', serif; font-size: 28px; margin-bottom: 6px; }
+  .stage-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gray-400); }
+  .stage-dot { width: 8px; height: 8px; border-radius: 50%; margin: 8px auto 0; }
+
+  /* VIEWS GRID */
+  .views-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 28px; }
+  .view-chip { background: white; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); font-size: 12px; font-weight: 600; color: var(--ink); transition: all 0.2s; border: 1px solid transparent; }
+  .view-chip:hover { border-color: var(--gold-light); transform: translateY(-1px); }
+  .view-count { margin-left: auto; font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--gray-400); }
+  .view-count.hot { color: var(--red); }
+  .view-count.warn { color: var(--amber); }
+  .view-count.ok { color: var(--green); }
+
+  /* TABLES */
+  .table-card { background: white; border-radius: 18px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 6px 24px rgba(0,0,0,0.04); margin-bottom: 28px; }
+  .table-head { padding: 24px 28px 20px; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: space-between; }
+  .table-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--ink); }
+  .table-subtitle { font-size: 12px; color: var(--gray-600); margin-top: 3px; }
+  .table-badge { padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .table-badge.danger { background: var(--red-bg); color: var(--red); }
+  .table-badge.success { background: var(--green-bg); color: var(--green); }
+  .table-badge.warn { background: var(--amber-bg); color: var(--amber); }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { padding: 12px 28px; text-align: left; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gray-400); background: var(--gray-50); border-bottom: 1px solid var(--gray-100); }
+  tbody tr { border-bottom: 1px solid var(--gray-100); transition: background 0.15s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--gray-50); }
+  tbody td { padding: 16px 28px; font-size: 13px; color: var(--ink); }
+  .guest-name { font-weight: 600; }
+  .guest-sub { font-size: 11px; color: var(--gray-400); margin-top: 1px; }
+  .empty-row td { text-align: center; color: var(--gray-400); padding: 32px; font-size: 13px; }
+
+  /* TAGS & BADGES */
+  .tag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .tag-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .tag.WhatsApp { background: rgba(42,154,106,0.1); color: var(--green); }
+  .tag.Airbnb { background: rgba(220,79,64,0.1); color: var(--red); }
+  .tag.Booking { background: rgba(72,114,232,0.1); color: var(--blue); }
+  .tag.Instagram { background: rgba(124,92,191,0.1); color: var(--purple); }
+  .tag.Llamada { background: rgba(232,140,53,0.1); color: var(--amber); }
+  .tag.Email { background: rgba(200,168,75,0.1); color: var(--gold-dark); }
+  .tag.Directo { background: rgba(200,168,75,0.1); color: var(--gold-dark); }
+  .tag.default { background: var(--gray-100); color: var(--gray-600); }
+  .status { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .status.nuevo { background: var(--blue-bg); color: var(--blue); }
+  .status.confirmado { background: var(--green-bg); color: var(--green); }
+  .status.conversacion { background: var(--amber-bg); color: var(--amber); }
+  .status.cancelado { background: var(--red-bg); color: var(--red); }
+  .status.anomalia { background: var(--gray-100); color: var(--gray-600); }
+  .valor-cop { color: var(--gold); font-weight: 700; }
+  .action-urgent { color: var(--red); font-weight: 700; font-size: 12px; }
+  .action-warn { color: var(--amber); font-weight: 700; font-size: 12px; }
+
+  /* CHANNEL BARS */
+  .chart-card { background: white; border-radius: 18px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 6px 24px rgba(0,0,0,0.04); margin-bottom: 28px; }
+  .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+  .chart-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--ink); }
+  .chart-subtitle { font-size: 12px; color: var(--gray-600); margin-top: 2px; }
+  .channel-rows { display: flex; flex-direction: column; gap: 16px; }
+  .channel-row { display: grid; grid-template-columns: 120px 1fr 90px; align-items: center; gap: 16px; }
+  .channel-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .channel-track { height: 32px; background: var(--gray-100); border-radius: 8px; overflow: hidden; }
+  .channel-fill { height: 100%; border-radius: 8px; display: flex; align-items: center; padding: 0 12px; font-size: 11px; font-weight: 700; color: white; width: 0; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); white-space: nowrap; min-width: 40px; }
+  .channel-count { font-size: 13px; font-weight: 600; color: var(--gray-600); text-align: right; }
+
+  /* DEPLOY GUIDE */
+  .deploy-card { background: white; border-radius: 18px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 6px 24px rgba(0,0,0,0.04); margin-bottom: 28px; border: 2px dashed var(--gray-200); }
+  .deploy-card h3 { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 16px; }
+  .deploy-step { display: flex; gap: 16px; align-items: flex-start; padding: 16px 0; border-bottom: 1px solid var(--gray-100); }
+  .deploy-step:last-child { border-bottom: none; }
+  .deploy-num { width: 28px; height: 28px; border-radius: 50%; background: var(--black); color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+  .deploy-content strong { display: block; font-size: 14px; margin-bottom: 4px; }
+  .deploy-content p { font-size: 13px; color: var(--gray-600); line-height: 1.6; }
+  .deploy-content code { background: var(--gray-100); padding: 2px 6px; border-radius: 4px; font-size: 12px; font-family: monospace; color: var(--ink); }
+  .deploy-content a { color: var(--blue); text-decoration: none; font-weight: 600; }
+  .deploy-content a:hover { text-decoration: underline; }
+
+  @media print {
+    .top-bar, .sync-btn, .print-btn { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .loading-screen, .deploy-card { display: none !important; }
+    body { background: white; }
+  }
+  @media (max-width: 768px) {
+    .top-bar { padding: 14px 20px; flex-wrap: wrap; gap: 10px; }
+    .container { padding: 20px; }
+    .kpi-grid { grid-template-columns: 1fr; }
+    .mini-grid { grid-template-columns: repeat(2, 1fr); }
+    .views-grid { grid-template-columns: repeat(2, 1fr); }
+    .pipeline-stages { grid-template-columns: repeat(3, 1fr); }
+    thead th:nth-child(n+4), tbody td:nth-child(n+4) { display: none; }
+    .print-btn { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">Origen<span>26</span></div>
+  <div class="loading-sub">CONECTANDO CON NOTION</div>
+  <div class="loading-bar-track">
+    <div class="loading-bar-fill" id="loadingBar"></div>
+  </div>
+  <div class="loading-status" id="loadingStatus">Iniciando...</div>
+</div>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="logo-area">
+    <div class="logo-text">Origen<span>26</span></div>
+    <div class="hotel-label">Live Dashboard</div>
+  </div>
+  <div class="top-right">
+    <span class="last-sync" id="lastSync">—</span>
+    <div class="sync-btn" id="syncBtn" onclick="fetchAllData()">
+      <span class="sync-icon">↻</span> Sincronizar
+    </div>
+    <div class="print-btn" onclick="window.print()">🖨 Imprimir</div>
+    <div class="live-badge">
+      <div class="pulse-dot"></div>
+      <span id="topDate">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- ERROR BANNER -->
+<div class="error-banner" id="errorBanner">
+  ⚠️ <span id="errorMsg">Error conectando con Notion.</span>
+</div>
+
+<!-- MAIN -->
+<div class="container">
+
+  <!-- GUÍA DE DEPLOY (solo visible si hay error CORS) -->
+  <div id="deployGuide" style="display:none">
+    <div class="section-block">
+      <div class="section-header">
+        <div class="section-label">Setup Requerido</div>
+        <h2 class="section-title">Conectar con Notion</h2>
+      </div>
+      <div class="deploy-card">
+        <h3>🚀 Deploy en Netlify (10 min · gratis)</h3>
+        <p style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">Este archivo HTML necesita un servidor para conectarse a Notion sin errores CORS. Sigue estos pasos una sola vez:</p>
+
+        <div class="deploy-step">
+          <div class="deploy-num">1</div>
+          <div class="deploy-content">
+            <strong>Subir la carpeta a GitHub</strong>
+            <p>Ve a <a href="https://github.com/new" target="_blank">github.com/new</a> → Crea repo <code>origen26-dashboard</code> → Sube los 3 archivos: <code>index.html</code>, <code>netlify.toml</code>, <code>netlify/functions/notion.js</code></p>
+          </div>
+        </div>
+        <div class="deploy-step">
+          <div class="deploy-num">2</div>
+          <div class="deploy-content">
+            <strong>Conectar en Netlify</strong>
+            <p>Ve a <a href="https://netlify.com" target="_blank">netlify.com</a> → "Add new site" → "Import from Git" → Selecciona el repo → Deploy (automático)</p>
+          </div>
+        </div>
+        <div class="deploy-step">
+          <div class="deploy-num">3</div>
+          <div class="deploy-content">
+            <strong>Compartir la URL</strong>
+            <p>Netlify te da una URL pública tipo <code>origen26.netlify.app</code> — funciona en móvil, tablet, y se puede imprimir.</p>
+          </div>
+        </div>
+        <div class="deploy-step">
+          <div class="deploy-num">4</div>
+          <div class="deploy-content">
+            <strong>(Opcional) Variables de entorno</strong>
+            <p>En Netlify → Site settings → Environment variables → Agrega <code>NOTION_TOKEN</code> y <code>DATABASE_ID</code> para mayor seguridad.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 01 DINERO -->
+  <div class="section-block" style="animation-delay:0.1s">
+    <div class="section-header">
+      <div class="section-label">01 — Dinero</div>
+      <h2 class="section-title">Lo que importa hoy</h2>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi-card green-accent">
+        <span class="kpi-icon">🏨</span>
+        <div class="kpi-label">Reservas Confirmadas</div>
+        <div class="kpi-value" id="kpiConfirmadas">—</div>
+        <div class="kpi-meta" id="kpiConfirmadasMeta">cargando...</div>
+      </div>
+      <div class="kpi-card gold-accent">
+        <span class="kpi-icon">💰</span>
+        <div class="kpi-label">Ingresos Estimados (COP)</div>
+        <div class="kpi-value" id="kpiIngresos">—</div>
+        <div class="kpi-meta" id="kpiIngresosMeta">Suma de tarifas confirmadas</div>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-icon">📊</span>
+        <div class="kpi-label">Tasa de Conversión</div>
+        <div class="kpi-value" id="kpiConversion">—</div>
+        <div class="kpi-meta" id="kpiConversionMeta">cargando...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 02 CONTROL -->
+  <div class="section-block" style="animation-delay:0.2s">
+    <div class="section-header">
+      <div class="section-label">02 — Control</div>
+      <h2 class="section-title">Atención inmediata</h2>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi-card red-accent">
+        <span class="kpi-icon">🚨</span>
+        <div class="kpi-label">Urgentes Hoy</div>
+        <div class="kpi-value" id="kpiUrgentes">—</div>
+        <div class="kpi-meta">Campo "Urgente hoy" activo</div>
+      </div>
+      <div class="kpi-card amber-accent">
+        <span class="kpi-icon">⚠️</span>
+        <div class="kpi-label">Falta Agendar Seguimiento</div>
+        <div class="kpi-value" id="kpiFaltaAgendar">—</div>
+        <div class="kpi-meta">Sin próxima acción definida</div>
+      </div>
+      <div class="kpi-card blue-accent">
+        <span class="kpi-icon">📥</span>
+        <div class="kpi-label">Nuevos Hoy</div>
+        <div class="kpi-value" id="kpiNuevosHoy">—</div>
+        <div class="kpi-meta">Ingresados hoy vía Jotform</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 CALIDAD -->
+  <div class="section-block" style="animation-delay:0.25s">
+    <div class="section-header">
+      <div class="section-label">03 — Calidad</div>
+      <h2 class="section-title">Indicadores de salud</h2>
+    </div>
+    <div class="mini-grid">
+      <div class="mini-card">
+        <div class="mini-label">$ Promedio</div>
+        <div class="mini-value" id="miniPromedio">—</div>
+        <div class="mini-desc">Por reserva · COP</div>
+      </div>
+      <div class="mini-card">
+        <div class="mini-label">Noches Prom.</div>
+        <div class="mini-value" id="miniNoches">—</div>
+        <div class="mini-desc">Estadía promedio</div>
+      </div>
+      <div class="mini-card">
+        <div class="mini-label">Canceladas</div>
+        <div class="mini-value" id="miniCanceladas">—</div>
+        <div class="mini-desc" id="miniCanceladasDesc">del total</div>
+      </div>
+      <div class="mini-card">
+        <div class="mini-label">Total Leads</div>
+        <div class="mini-value" id="miniTotal">—</div>
+        <div class="mini-desc">En la base de datos</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04 CANALES -->
+  <div class="section-block" style="animation-delay:0.3s">
+    <div class="section-header">
+      <div class="section-label">04 — Estrategia</div>
+      <h2 class="section-title">De dónde viene el negocio</h2>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Canal más activo</div>
+          <div class="chart-subtitle">Leads por origen de contacto · datos reales</div>
+        </div>
+      </div>
+      <div class="channel-rows" id="channelRows">
+        <div style="color:var(--gray-400); font-size:13px;">Cargando canales...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="section-block" style="animation-delay:0.35s">
+    <div class="pipeline-card">
+      <div class="pipeline-title">Pipeline de Reservas</div>
+      <div class="pipeline-period">Estado actual · Notion en vivo</div>
+      <div class="pipeline-value" id="pipelineIngresos">$—</div>
+      <div class="pipeline-desc" id="pipelineDesc">Cargando...</div>
+      <div class="pipeline-stages">
+        <div class="stage">
+          <div class="stage-count" style="color:var(--blue)" id="stageNuevo">—</div>
+          <div class="stage-dot" style="background:var(--blue)"></div>
+          <div class="stage-label">Nuevo</div>
+        </div>
+        <div class="stage">
+          <div class="stage-count" style="color:var(--amber)" id="stageConv">—</div>
+          <div class="stage-dot" style="background:var(--amber)"></div>
+          <div class="stage-label">En Conv.</div>
+        </div>
+        <div class="stage">
+          <div class="stage-count" style="color:var(--green)" id="stageConf">—</div>
+          <div class="stage-dot" style="background:var(--green)"></div>
+          <div class="stage-label">Confirmado</div>
+        </div>
+        <div class="stage">
+          <div class="stage-count" style="color:var(--red)" id="stageCanc">—</div>
+          <div class="stage-dot" style="background:var(--red)"></div>
+          <div class="stage-label">Cancelado</div>
+        </div>
+        <div class="stage">
+          <div class="stage-count" style="color:var(--gray-400)" id="stageAnom">—</div>
+          <div class="stage-dot" style="background:var(--gray-300)"></div>
+          <div class="stage-label">Anomalía</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 05 NOTION VISTAS -->
+  <div class="section-block" style="animation-delay:0.4s">
+    <div class="section-header">
+      <div class="section-label">05 — Notion</div>
+      <h2 class="section-title">Resumen por vistas</h2>
+    </div>
+    <div class="views-grid">
+      <div class="view-chip">🟠 CAPTURA — Hoy<span class="view-count ok" id="vCaptura">—</span></div>
+      <div class="view-chip">📥 INBOX — Nuevos<span class="view-count warn" id="vInbox">—</span></div>
+      <div class="view-chip">☀️ HOY — Acción hoy<span class="view-count warn" id="vHoy">—</span></div>
+      <div class="view-chip">🧳 CHECK-INS próx. 7d<span class="view-count ok" id="vCheckins">—</span></div>
+      <div class="view-chip">📅 CALENDARIO<span class="view-count ok" id="vCalendario">—</span></div>
+      <div class="view-chip">⚠️ ALERTAS<span class="view-count hot" id="vAlertas">—</span></div>
+      <div class="view-chip">🔴 CRÍTICAS<span class="view-count hot" id="vCriticas">—</span></div>
+      <div class="view-chip">🗂 CONTROL — Todos<span class="view-count" id="vControl">—</span></div>
+      <div class="view-chip">🛠 DEBUG<span class="view-count" id="vDebug">—</span></div>
+    </div>
+  </div>
+
+  <!-- 06 TABLA URGENTES -->
+  <div class="section-block" style="animation-delay:0.45s">
+    <div class="section-header">
+      <div class="section-label">06 — Atención Urgente</div>
+      <h2 class="section-title">Requieren acción ahora</h2>
+    </div>
+    <div class="table-card">
+      <div class="table-head">
+        <div>
+          <div class="table-title">🚨 Urgentes & En Riesgo</div>
+          <div class="table-subtitle">Urgente hoy activo · En conversación sin confirmar</div>
+        </div>
+        <div class="table-badge danger" id="badgeUrgentes">— urgentes</div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Huésped</th><th>Canal</th><th>Check-in</th><th>Estado</th><th>Teléfono</th>
+        </tr></thead>
+        <tbody id="tablaUrgentes"><tr class="empty-row"><td colspan="5">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 07 TABLA CONFIRMADAS -->
+  <div class="section-block" style="animation-delay:0.5s">
+    <div class="section-header">
+      <div class="section-label">07 — Confirmadas</div>
+      <h2 class="section-title">Reservas cerradas</h2>
+    </div>
+    <div class="table-card">
+      <div class="table-head">
+        <div>
+          <div class="table-title">✅ Confirmadas</div>
+          <div class="table-subtitle">Reservas exitosas · Vista CHECK-INS</div>
+        </div>
+        <div class="table-badge success" id="badgeConfirmadas">— confirmadas</div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Huésped</th><th>Canal</th><th>Check-in</th><th>Noches</th><th>Tarifa COP</th>
+        </tr></thead>
+        <tbody id="tablaConfirmadas"><tr class="empty-row"><td colspan="5">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 08 TABLA NUEVOS HOY -->
+  <div class="section-block" style="animation-delay:0.55s">
+    <div class="section-header">
+      <div class="section-label">08 — Captura</div>
+      <h2 class="section-title">Ingresados hoy</h2>
+    </div>
+    <div class="table-card">
+      <div class="table-head">
+        <div>
+          <div class="table-title">🟠 Nuevos Hoy — Vista CAPTURA</div>
+          <div class="table-subtitle">Leads captados hoy vía Jotform → Make → Notion</div>
+        </div>
+        <div class="table-badge warn" id="badgeNuevosHoy">— hoy</div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Huésped</th><th>Canal</th><th>Check-in</th><th>Check-out</th><th>Notas</th>
+        </tr></thead>
+        <tbody id="tablaNuevosHoy"><tr class="empty-row"><td colspan="5">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  CONFIG
+//  - En desarrollo local: usa proxy CORS externo
+//  - En Netlify (producción): usa la Function local
+// ══════════════════════════════════════════════════════════
+const NOTION_TOKEN = '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';
+const DATABASE_ID  = '2fd9d866-1ce0-80f0-b687-000b618c1ba7';
+const AUTO_REFRESH = 60;
+
+// Detecta si estamos en Netlify (la Function está disponible) o local (necesita proxy)
+const IS_NETLIFY = window.location.hostname !== 'localhost' &&
+                   window.location.hostname !== '127.0.0.1' &&
+                   !window.location.hostname.includes('claudeusercontent');
+
+// Endpoint: en Netlify usa nuestra Function; en local usa corsproxy.io
+const ENDPOINT = IS_NETLIFY
+  ? '/.netlify/functions/notion'
+  : `https://corsproxy.io/?${encodeURIComponent(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`)}`;
+
+// ══════════════════════════════════════════════════════════
+//  NOTION QUERY — paginación automática
+// ══════════════════════════════════════════════════════════
+async function notionQuery() {
+  let results = [];
+  let cursor = null;
+
+  while (true) {
+    let res;
+
+    if (IS_NETLIFY) {
+      // Netlify Function: POST directo a nuestra Function
+      const body = { page_size: 100 };
+      if (cursor) body.start_cursor = cursor;
+      res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } else {
+      // Proxy CORS: el proxy manda la request a Notion con nuestros headers
+      const body = { page_size: 100 };
+      if (cursor) body.start_cursor = cursor;
+      res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_TOKEN}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json',
+          'x-requested-with': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(body)
+      });
+    }
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Notion API ${res.status}: ${errText.substring(0,200)}`);
+    }
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    results = results.concat(data.results || []);
+    if (!data.has_more || !data.next_cursor) break;
+    cursor = data.next_cursor;
+  }
+
+  return results;
+}
+
+// ══════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════
+const prop = (page, name) => page.properties?.[name];
+
+function getText(page, name) {
+  const p = prop(page, name);
+  if (!p) return '';
+  if (p.type === 'title')        return p.title?.map(t=>t.plain_text).join('') || '';
+  if (p.type === 'rich_text')    return p.rich_text?.map(t=>t.plain_text).join('') || '';
+  if (p.type === 'select')       return p.select?.name || '';
+  if (p.type === 'status')       return p.status?.name || '';
+  if (p.type === 'phone_number') return p.phone_number || '';
+  if (p.type === 'email')        return p.email || '';
+  if (p.type === 'number')       return p.number ?? '';
+  if (p.type === 'checkbox')     return p.checkbox ? 'true' : 'false';
+  if (p.type === 'date')         return p.date?.start || '';
+  if (p.type === 'formula') {
+    const f = p.formula;
+    if (f.type === 'string')  return f.string || '';
+    if (f.type === 'number')  return String(f.number ?? '');
+    if (f.type === 'boolean') return f.boolean ? 'true' : 'false';
+  }
+  return '';
+}
+
+function getNum(page, name) {
+  const v = parseFloat(getText(page, name));
+  return isNaN(v) ? 0 : v;
+}
+
+function getBool(page, name) {
+  const p = prop(page, name);
+  if (!p) return false;
+  if (p.type === 'checkbox') return !!p.checkbox;
+  if (p.type === 'formula')  return p.formula?.boolean === true;
+  return false;
+}
+
+function getDate(page, name) {
+  const p = prop(page, name);
+  if (!p) return null;
+  if (p.type === 'date')             return p.date?.start ? new Date(p.date.start) : null;
+  if (p.type === 'created_time')     return new Date(p.created_time);
+  if (p.type === 'last_edited_time') return new Date(p.last_edited_time);
+  return null;
+}
+
+function formatCOP(n) {
+  if (n >= 1_000_000) return '$' + (n/1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000)     return '$' + Math.round(n/1000) + 'k';
+  return '$' + Math.round(n);
+}
+
+function isToday(date) {
+  if (!date) return false;
+  const t = new Date();
+  return date.getFullYear() === t.getFullYear() &&
+         date.getMonth()    === t.getMonth()    &&
+         date.getDate()     === t.getDate();
+}
+
+function isWithinDays(date, days) {
+  if (!date) return false;
+  const diff = (date - new Date()) / (1000*60*60*24);
+  return diff >= 0 && diff <= days;
+}
+
+function normalizeStatus(s) {
+  if (!s) return '';
+  const low = s.toLowerCase();
+  if (low.includes('nuevo'))       return 'Nuevo';
+  if (low.includes('conversaci'))  return 'En conversación';
+  if (low.includes('confirmad'))   return 'Confirmado';
+  if (low.includes('cancelad'))    return 'Cancelado';
+  if (low.includes('anomal'))      return 'Anomalía';
+  return s;
+}
+
+function renderTag(canal) {
+  const canalColors = {
+    WhatsApp:'#2A9A6A', whatsapp:'#2A9A6A',
+    Airbnb:'#DC4F40',   airbnb:'#DC4F40',
+    Booking:'#4872E8',  booking:'#4872E8',
+    Instagram:'#7C5CBF',instagram:'#7C5CBF',
+    Llamada:'#E88C35',  llamada:'#E88C35',
+    Email:'#8A6D29',    email:'#8A6D29',
+    Directo:'#8A6D29',  directo:'#8A6D29',
+  };
+  const clsNames = {
+    WhatsApp:'WhatsApp', whatsapp:'WhatsApp',
+    Airbnb:'Airbnb',     airbnb:'Airbnb',
+    Booking:'Booking',   booking:'Booking',
+    Instagram:'Instagram',instagram:'Instagram',
+    Llamada:'Llamada',   llamada:'Llamada',
+    Email:'Email',       email:'Email',
+    Directo:'Directo',   directo:'Directo',
+  };
+  const cls   = clsNames[canal] || 'default';
+  const color = canalColors[canal] || '#A3A39C';
+  return `<span class="tag ${cls}"><span class="tag-dot" style="background:${color}"></span>${canal || '—'}</span>`;
+}
+
+function renderStatus(s) {
+  const norm = normalizeStatus(s);
+  const clsMap = {
+    'Nuevo':'nuevo', 'En conversación':'conversacion',
+    'Confirmado':'confirmado', 'Cancelado':'cancelado', 'Anomalía':'anomalia'
+  };
+  return `<span class="status ${clsMap[norm]||'anomalia'}">${norm||s||'—'}</span>`;
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  return d.toLocaleDateString('es-CO', { day:'numeric', month:'short' });
+}
+
+// ══════════════════════════════════════════════════════════
+//  MAIN
+// ══════════════════════════════════════════════════════════
+let allPages = [];
+
+async function fetchAllData() {
+  const btn = document.getElementById('syncBtn');
+  btn.classList.add('spinning');
+  setLoadingVisible(true);
+
+  try {
+    updateLoadingStatus('Conectando con Notion...', 20);
+    allPages = await notionQuery();
+    updateLoadingStatus(`${allPages.length} registros recibidos...`, 70);
+
+    renderDashboard(allPages);
+    updateLoadingStatus('Dashboard actualizado ✓', 100);
+
+    document.getElementById('lastSync').textContent =
+      'Sync: ' + new Date().toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'});
+
+    hideError();
+    document.getElementById('deployGuide').style.display = 'none';
+    setTimeout(hideLoading, 600);
+
+  } catch(err) {
+    console.error(err);
+    const msg = err.message || '';
+    let hint = '';
+    if (msg.includes('fetch') || msg.includes('CORS') || msg.includes('Network')) {
+      hint = 'Error CORS. Necesitas hacer deploy en Netlify (ver guía abajo).';
+      document.getElementById('deployGuide').style.display = 'block';
+    } else if (msg.includes('401') || msg.includes('unauthorized')) {
+      hint = 'Token inválido o la integración no tiene acceso a la DB de Notion.';
+    } else {
+      hint = msg;
+    }
+    showError(hint);
+    hideLoading();
+  }
+
+  btn.classList.remove('spinning');
+}
+
+// ══════════════════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════════════════
+function renderDashboard(pages) {
+  const confirmadas = pages.filter(p => normalizeStatus(getText(p,'Estado')) === 'Confirmado');
+  const enConv      = pages.filter(p => normalizeStatus(getText(p,'Estado')) === 'En conversación');
+  const nuevos      = pages.filter(p => normalizeStatus(getText(p,'Estado')) === 'Nuevo');
+  const canceladas  = pages.filter(p => normalizeStatus(getText(p,'Estado')) === 'Cancelado');
+  const anomalias   = pages.filter(p => normalizeStatus(getText(p,'Estado')) === 'Anomalía');
+
+  const urgentes     = pages.filter(p => getBool(p,'Urgente hoy'));
+  const faltaAgendar = pages.filter(p =>
+    getBool(p,'Falta agendar seguimi...') || getBool(p,'Falta agendar seguimiento')
+  );
+
+  const nuevosHoy = pages.filter(p => {
+    const created = getDate(p,'Creado (auto)') || new Date(p.created_time);
+    return isToday(created);
+  });
+
+  const checkinsProx = confirmadas.filter(p => isWithinDays(getDate(p,'Check-in'), 7));
+
+  // KPIs DINERO
+  const totalTarifas = confirmadas.reduce((s,p) => s + getNum(p,'Tarifa (COP...)'), 0);
+  set('kpiConfirmadas', confirmadas.length);
+  set('kpiConfirmadasMeta', `De ${pages.length} leads totales`);
+  set('kpiIngresos', formatCOP(totalTarifas));
+  set('kpiIngresosMeta', `${confirmadas.length} reservas confirmadas`);
+  const conv = pages.length > 0 ? Math.round(confirmadas.length / pages.length * 100) : 0;
+  set('kpiConversion', conv + '%');
+  set('kpiConversionMeta', `${confirmadas.length} confirmadas / ${pages.length} leads`);
+
+  // KPIs CONTROL
+  set('kpiUrgentes', urgentes.length);
+  set('kpiFaltaAgendar', faltaAgendar.length);
+  set('kpiNuevosHoy', nuevosHoy.length);
+
+  // CALIDAD
+  const promedioTarifa = confirmadas.length > 0 ? totalTarifas / confirmadas.length : 0;
+  set('miniPromedio', formatCOP(promedioTarifa));
+  const totalNoches = pages.reduce((s,p) => s + getNum(p,'Noches'), 0);
+  set('miniNoches', pages.length > 0 ? (totalNoches/pages.length).toFixed(1) : '—');
+  set('miniCanceladas', canceladas.length);
+  set('miniCanceladasDesc', pages.length > 0 ? `${Math.round(canceladas.length/pages.length*100)}% del total` : '');
+  set('miniTotal', pages.length);
+
+  // PIPELINE
+  set('pipelineIngresos', formatCOP(totalTarifas));
+  set('pipelineDesc', `${confirmadas.length} confirmadas + ${enConv.length} en conversación · COP`);
+  set('stageNuevo', nuevos.length);
+  set('stageConv',  enConv.length);
+  set('stageConf',  confirmadas.length);
+  set('stageCanc',  canceladas.length);
+  set('stageAnom',  anomalias.length);
+
+  // CANALES
+  const canalMap = {};
+  pages.forEach(p => {
+    const c = getText(p,'Canal') || 'Sin canal';
+    canalMap[c] = (canalMap[c]||0) + 1;
+  });
+  const sortedCanales = Object.entries(canalMap).sort((a,b)=>b[1]-a[1]);
+  const canalColors = {
+    WhatsApp:'#2A9A6A', whatsapp:'#2A9A6A', Airbnb:'#DC4F40', airbnb:'#DC4F40',
+    Booking:'#4872E8',  booking:'#4872E8',  Instagram:'#7C5CBF',instagram:'#7C5CBF',
+    Llamada:'#E88C35',  llamada:'#E88C35',  Email:'#C8A84B',   email:'#C8A84B',
+    Directo:'#8A6D29',  directo:'#8A6D29',
+  };
+  document.getElementById('channelRows').innerHTML = sortedCanales.map(([name, count]) => {
+    const pct   = Math.round(count / pages.length * 100);
+    const color = canalColors[name] || '#A3A39C';
+    return `<div class="channel-row">
+      <div class="channel-name">${name}</div>
+      <div class="channel-track">
+        <div class="channel-fill" data-width="${pct}" style="background:${color};">${pct}%</div>
+      </div>
+      <div class="channel-count">${count} leads</div>
+    </div>`;
+  }).join('');
+  setTimeout(() => {
+    document.querySelectorAll('.channel-fill').forEach((bar, i) => {
+      setTimeout(() => { bar.style.width = bar.getAttribute('data-width') + '%'; }, i * 80);
+    });
+  }, 200);
+
+  // VISTAS
+  set('vCaptura',   nuevosHoy.length);
+  set('vInbox',     nuevos.length + enConv.length);
+  const accionHoy = pages.filter(p => isToday(getDate(p,'Proxima accion')));
+  set('vHoy',       accionHoy.length);
+  set('vCheckins',  checkinsProx.length);
+  set('vCalendario',confirmadas.length);
+  set('vAlertas',   faltaAgendar.length);
+  set('vCriticas',  urgentes.length);
+  set('vControl',   pages.length);
+  set('vDebug',     pages.length);
+
+  // TABLA URGENTES
+  const urgentesData = [...urgentes, ...enConv.filter(p => isWithinDays(getDate(p,'Check-in'), 7))]
+    .filter((p,i,a) => a.indexOf(p) === i).slice(0, 10);
+  set('badgeUrgentes', urgentesData.length + ' urgentes');
+  document.getElementById('tablaUrgentes').innerHTML = urgentesData.length === 0
+    ? '<tr class="empty-row"><td colspan="5">✅ Sin urgencias activas</td></tr>'
+    : urgentesData.map(p => {
+        const ci = getDate(p,'Check-in');
+        const daysUntil = ci ? Math.ceil((ci - new Date())/(1000*60*60*24)) : null;
+        const tel = getText(p,'Teléfono / WhatsApp') || getText(p,'WhatsApp') || '—';
+        return `<tr>
+          <td><div class="guest-name">${getText(p,'Huésped')||'Sin nombre'}</div>
+              <div class="guest-sub">${getText(p,'Notas / Solicitudes')||''}</div></td>
+          <td>${renderTag(getText(p,'Canal'))}</td>
+          <td>${ci ? formatDate(ci) + (daysUntil !== null ? ` · <strong>${daysUntil}d</strong>` : '') : '—'}</td>
+          <td>${renderStatus(getText(p,'Estado'))}</td>
+          <td class="${getBool(p,'Urgente hoy') ? 'action-urgent' : 'action-warn'}">${tel}</td>
+        </tr>`;
+      }).join('');
+
+  // TABLA CONFIRMADAS
+  set('badgeConfirmadas', confirmadas.length + ' confirmadas');
+  document.getElementById('tablaConfirmadas').innerHTML = confirmadas.length === 0
+    ? '<tr class="empty-row"><td colspan="5">Sin reservas confirmadas aún</td></tr>'
+    : confirmadas.slice(0,15).map(p => {
+        const tarifa = getNum(p,'Tarifa (COP...)');
+        return `<tr>
+          <td><div class="guest-name">${getText(p,'Huésped')||'Sin nombre'}</div>
+              <div class="guest-sub">${getText(p,'Habitación')||''}</div></td>
+          <td>${renderTag(getText(p,'Canal'))}</td>
+          <td>${formatDate(getDate(p,'Check-in'))}</td>
+          <td>${getNum(p,'Noches')||'—'}</td>
+          <td class="valor-cop">${tarifa ? formatCOP(tarifa) : '—'}</td>
+        </tr>`;
+      }).join('');
+
+  // TABLA NUEVOS HOY
+  set('badgeNuevosHoy', nuevosHoy.length + ' hoy');
+  document.getElementById('tablaNuevosHoy').innerHTML = nuevosHoy.length === 0
+    ? '<tr class="empty-row"><td colspan="5">Sin registros nuevos hoy</td></tr>'
+    : nuevosHoy.map(p => `<tr>
+        <td><div class="guest-name">${getText(p,'Huésped')||'Sin nombre'}</div></td>
+        <td>${renderTag(getText(p,'Canal'))}</td>
+        <td>${formatDate(getDate(p,'Check-in'))}</td>
+        <td>${formatDate(getDate(p,'Check-out'))}</td>
+        <td>${getText(p,'Notas / Solicitudes')||'—'}</td>
+      </tr>`).join('');
+
+  // FECHA
+  document.getElementById('topDate').textContent = new Date().toLocaleDateString('es-CO',
+    { weekday:'long', day:'numeric', month:'long' });
+}
+
+// ══════════════════════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════════════════════
+function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+function setLoadingVisible(v) {
+  if (v) {
+    document.getElementById('loadingScreen').classList.remove('hidden');
+    document.getElementById('loadingBar').style.width = '0%';
+  }
+}
+function hideLoading() { document.getElementById('loadingScreen').classList.add('hidden'); }
+function updateLoadingStatus(msg, pct) {
+  document.getElementById('loadingStatus').textContent = msg;
+  document.getElementById('loadingBar').style.width = pct + '%';
+}
+function showError(msg) {
+  const b = document.getElementById('errorBanner');
+  document.getElementById('errorMsg').textContent = msg;
+  b.classList.add('visible');
+}
+function hideError() { document.getElementById('errorBanner').classList.remove('visible'); }
+
+// AUTO-REFRESH
+let countdown = AUTO_REFRESH;
+setInterval(() => {
+  countdown--;
+  if (countdown <= 0) { countdown = AUTO_REFRESH; fetchAllData(); }
+  const sync = document.getElementById('lastSync');
+  if (sync) {
+    const base = sync.textContent.replace(/ \(\d+s\)$/, '');
+    sync.textContent = base + (countdown < AUTO_REFRESH ? ` (${countdown}s)` : '');
+  }
+}, 1000);
+
+// INIT
+window.addEventListener('load', () => {
+  document.getElementById('loadingBar').style.width = '10%';
+  setTimeout(fetchAllData, 300);
+});
+</script>
+</body>
+</html>
