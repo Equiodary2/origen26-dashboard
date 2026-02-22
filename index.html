@@ -681,8 +681,8 @@ function renderDashboard(pages) {
   });
 
   // ── KPIs DINERO ──
-  const totalTarifas = confirmadas.reduce((s,p) => s + getNum(p,'Tarifa (COP...)'), 0);
-  const totalTarifasAll = pages.reduce((s,p) => s + getNum(p,'Tarifa (COP...)'), 0);
+  const totalTarifas = confirmadas.reduce((s,p) => s + getNum(p,'Tarifa (COP / USD)'), 0);
+  const totalTarifasAll = pages.reduce((s,p) => s + getNum(p,'Tarifa (COP / USD)'), 0);
 
   set('kpiConfirmadas', confirmadas.length);
   set('kpiConfirmadasMeta', `De ${pages.length} leads totales`);
@@ -800,7 +800,7 @@ function renderDashboard(pages) {
   document.getElementById('tablaConfirmadas').innerHTML = confirmadas.length === 0
     ? '<tr class="empty-row"><td colspan="5">Sin reservas confirmadas aún</td></tr>'
     : confirmadas.slice(0,15).map(p => {
-        const tarifa = getNum(p,'Tarifa (COP...)');
+        const tarifa = getNum(p,'Tarifa (COP / USD)');
         return `<tr>
           <td><div class="guest-name">${getText(p,'Huésped')||'Sin nombre'}</div>
               <div class="guest-sub">${getText(p,'Habitación')||''}</div></td>
