@@ -506,7 +506,16 @@ async function notionQuery(filter = {}, sorts = []) {
 // ══════════════════════════════════════════════
 //  HELPERS — extraer propiedades de Notion
 // ══════════════════════════════════════════════
-const prop = (page, name) => page.properties?.[name];
+// Busca la propiedad tolerando espacios extra al inicio/fin del nombre en Notion
+const prop = (page, name) => {
+  if (!page.properties) return undefined;
+  // Intento exacto primero
+  if (page.properties[name] !== undefined) return page.properties[name];
+  // Búsqueda tolerante: comparar trimmeado
+  const nameTrim = name.trim().toLowerCase();
+  const key = Object.keys(page.properties).find(k => k.trim().toLowerCase() === nameTrim);
+  return key ? page.properties[key] : undefined;
+};
 
 function getText(page, name) {
   const p = prop(page, name);
@@ -636,16 +645,14 @@ async function fetchAllData() {
   try {
     updateLoadingStatus('Conectando con Notion...', 20);
     allPages = await notionQuery({}, [{ property: 'Creado (auto)', direction: 'descending' }]);
-    // DEBUG: mostrar primeros 3 estados en consola y en pantalla
+    // DEBUG: log estados de los primeros registros en consola
     if (allPages.length > 0) {
       const dbgInfo = allPages.slice(0,5).map(p => {
-        const ep = p.properties && p.properties['Estado'];
+        const ep = prop(p, 'Estado');
         const val = ep ? (ep.status ? ep.status.name : ep.select ? ep.select.name : ep.type + ':??') : 'NO_FIELD';
-        return (p.properties && p.properties['Huésped'] ? p.properties['Huésped'].title?.[0]?.plain_text : '?') + ' → ' + val;
+        return (p.properties && prop(p,'Huésped') ? prop(p,'Huésped').title?.[0]?.plain_text : '?') + ' → ' + val;
       }).join(' | ');
-      console.warn('ESTADOS REALES:', dbgInfo);
-      document.getElementById('errorMsg').textContent = 'DEBUG: ' + dbgInfo;
-      document.getElementById('errorBanner').classList.add('visible');
+      console.log('ESTADOS REALES:', dbgInfo);
     }
     updateLoadingStatus(`${allPages.length} registros recibidos...`, 60);
 
@@ -896,3 +903,4 @@ window.addEventListener('load', () => {
 </script>
 </body>
 </html>
+
