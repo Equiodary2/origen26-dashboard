@@ -636,6 +636,17 @@ async function fetchAllData() {
   try {
     updateLoadingStatus('Conectando con Notion...', 20);
     allPages = await notionQuery({}, [{ property: 'Creado (auto)', direction: 'descending' }]);
+    // DEBUG: mostrar primeros 3 estados en consola y en pantalla
+    if (allPages.length > 0) {
+      const dbgInfo = allPages.slice(0,5).map(p => {
+        const ep = p.properties && p.properties['Estado'];
+        const val = ep ? (ep.status ? ep.status.name : ep.select ? ep.select.name : ep.type + ':??') : 'NO_FIELD';
+        return (p.properties && p.properties['Huésped'] ? p.properties['Huésped'].title?.[0]?.plain_text : '?') + ' → ' + val;
+      }).join(' | ');
+      console.warn('ESTADOS REALES:', dbgInfo);
+      document.getElementById('errorMsg').textContent = 'DEBUG: ' + dbgInfo;
+      document.getElementById('errorBanner').classList.add('visible');
+    }
     updateLoadingStatus(`${allPages.length} registros recibidos...`, 60);
 
     renderDashboard(allPages);
@@ -885,4 +896,3 @@ window.addEventListener('load', () => {
 </script>
 </body>
 </html>
-
