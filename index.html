@@ -575,10 +575,12 @@ function isWithinDays(date, days) {
 function normalizeStatus(s) {
   if (!s) return '';
   const low = s.toLowerCase();
-  if (low.includes('nuevo')) return 'Nuevo';
+  // Valores exactos de Notion: "Nuevo – sin confirmar", "En conversación",
+  // "Confirmado", "Cerrado – no se concretó"
+  if (low.includes('nuevo') || low.includes('sin confirmar')) return 'Nuevo';
   if (low.includes('conversaci')) return 'En conversación';
   if (low.includes('confirmad')) return 'Confirmado';
-  if (low.includes('cancelad')) return 'Cancelado';
+  if (low.includes('cerrado') || low.includes('cancelad') || low.includes('no se concret')) return 'Cancelado';
   if (low.includes('anomal')) return 'Anomalía';
   return s;
 }
@@ -883,3 +885,4 @@ window.addEventListener('load', () => {
 </script>
 </body>
 </html>
+
